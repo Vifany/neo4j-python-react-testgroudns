@@ -9,5 +9,6 @@ services:
       - ./data:/data  # Mounting data directory for persistence
     environment:
       NEO4J_AUTH: neo4j/password  # Set initial username and password
+      NEO4JLABS_PLUGINS: '["apoc"]'
     
   

@@ -79,13 +79,17 @@ def reply_message(post: Post):
         
 def get_thread(root_id: str, depth: int):
     """
-        Ответы к выбранному посту (все, плохо структурированные)
-        TODO: разобраться как структурировать
+        Ответы к выбранному посту, структурированно APOC, 
+        исключена избыточность за счёт WHERE NOT (startNode)-->() AND NOT ()-->(endNode)
+        TODO: понять как работает скопипасченый код
     """
     record = driver.session().run(
         """
-        MATCH (endNode)-[:REPLY_TO*]->(startNode:Post {id: $root_id})
-        RETURN endNode AS chain
+        MATCH c = (endNode)-[:REPLY_TO*]->(startNode:Post {id: $root_id})
+        WHERE NOT (startNode)-->() AND NOT ()-->(endNode)
+        WITH COLLECT(c) AS en
+        CALL apoc.convert.toTree(en) yield value
+        RETURN value
         """,
         root_id = root_id,
         depth = depth
