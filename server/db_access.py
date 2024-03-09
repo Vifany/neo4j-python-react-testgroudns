@@ -81,12 +81,11 @@ def get_thread(root_id: str, depth: int):
     """
         Ответы к выбранному посту, структурированно APOC, 
         исключена избыточность за счёт WHERE NOT (startNode)-->() AND NOT ()-->(endNode)
-        TODO: понять как работает скопипасченый код
     """
     record = driver.session().run(
         """
-        MATCH c = (endNode)-[:REPLY_TO*]->(startNode:Post {id: $root_id})
-        WHERE NOT (startNode)-->() AND NOT ()-->(endNode)
+        MATCH c = (startNode)-[:REPLY_TO*]->(endNode:Post {id: $root_id})
+        WHERE NOT (endNode)-->() AND NOT ()-->(startNode)
         WITH COLLECT(c) AS en
         CALL apoc.convert.toTree(en) yield value
         RETURN value
