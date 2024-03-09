@@ -68,7 +68,7 @@ def reply_message(post: Post):
         """
         MATCH (parentPost:Post {id: $reply})
         CREATE (newPost:Post {id: $id, body: $body})
-        CREATE (newPost)-[:REPLY_TO]->(parentPost)
+        CREATE (parentPost)-[:REPLIED_BY]->(newPost)
         RETURN newPost  
         """,
         id = post.id,
@@ -80,11 +80,11 @@ def reply_message(post: Post):
 def get_thread(root_id: str, depth: int):
     """
         Ответы к выбранному посту, структурированно APOC, 
-        исключена избыточность за счёт WHERE NOT (startNode)-->() AND NOT ()-->(endNode)
+        исключена избыточность за счёт WHERE NOT (endNode)-->() AND NOT ()-->(startNode)
     """
     record = driver.session().run(
         """
-        MATCH c = (startNode)-[:REPLY_TO*]->(endNode:Post {id: $root_id})
+        MATCH c = (startNode {id: $root_id})-[:REPLIED_BY*]->(endNode:Post )
         WHERE NOT (endNode)-->() AND NOT ()-->(startNode)
         WITH COLLECT(c) AS en
         CALL apoc.convert.toTree(en) yield value
