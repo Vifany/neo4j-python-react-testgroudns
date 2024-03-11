@@ -3,6 +3,7 @@ from fastapi import FastAPI, Depends
 from neo4j import GraphDatabase
 from utils import random_string 
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 
 # Define a Pydantic model for the Post object
 class Post(BaseModel):
@@ -16,6 +17,19 @@ NEO4J_PASSWORD = "password"
 
 # Create a FastAPI app instance
 app = FastAPI()
+
+origins = [
+    "*", 
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # Initialize the Neo4j driver instance on startup
 driver = None
@@ -95,3 +109,20 @@ async def get_thread(pid: str, session=Depends(get_neo4j_session)):
     )
     
     return result.data()
+
+@app.get("/threads")
+async def get_threads(session=Depends(get_neo4j_session)):
+    """ Get a list of all threads in the database
+    
+    returns: list of threads
+    """
+    
+    result = session.run(
+        """
+        MATCH (head:Post)
+        WHERE NOT ()-[:REPLY]->(head)
+        RETURN head
+        """
+    )
+    
+    return {'threads': [head['head'] for head in result.data()]}
