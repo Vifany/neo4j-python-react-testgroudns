@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import  useThreadsState from '../utils/storage';
-
+import Thread from '../components/thread-head';
 interface PageProps {
   // Define props if any
 }
@@ -24,11 +24,11 @@ const Threads: React.FC<PageProps> = () => {
     <div>
       <h1>This is a React TypeScript Page</h1>
       <p>Data fetched from the store: </p>
-      <ul>
+      <div>
         {data.threads.map((thread) => (
-          <li key={thread.id}>{thread.id} : {thread.body}</li>
+          <Thread pid = {thread.id} body ={thread.body} />
         ))}
-      </ul>
+      </div>
     </div>
   );
 };
