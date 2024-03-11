@@ -1,5 +1,14 @@
+import time
 from fastapi import FastAPI, Depends
 from neo4j import GraphDatabase
+from contextlib import asynccontextmanager
+from utils import random_string 
+from pydantic import BaseModel
+
+# Define a Pydantic model for the Post object
+class Post(BaseModel):
+    body: str
+    reply_to: str = None
 
 # Define your Neo4j database connection details
 NEO4J_URI = "neo4j://localhost:7687"
@@ -15,7 +24,15 @@ driver = None
 @app.on_event("startup")
 async def startup_event():
     global driver
-    driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+    while True:
+        try:
+            driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
+            driver.verify_connectivity()
+            break
+        except Exception as e:
+            print(e)
+            time.sleep(3)
+            continue
 
 # Define a dependency function to get a Neo4j session
 def get_neo4j_session():
@@ -25,26 +42,57 @@ def get_neo4j_session():
     finally:
         session.close()
 
-# Define a route handler that uses the Neo4j session
-@app.get("/")
-async def read_root(session=Depends(get_neo4j_session)):
-    pid = '123'
-    body = "Hello World!"
-    session.run(    
-        """
-        CREATE (p:Post {id: $id, body: $body})
-        """,  
-        id = pid, 
-        body = body)
+# Define a route to create a post
+
+@app.post("/post")
+async def create_post(post:Post, session=Depends(get_neo4j_session)):
+    """ Create a new post in the database
     
-@app.get("/test")
-async def read_post(session=Depends(get_neo4j_session)):
-    pid = '123'
-    ans = session.run(
+    args: post (Post): the post object to create
+    
+    returns: None
+    """
+    
+    pid = random_string()
+    if post.reply_to:
+        session.run(
+            """
+            MATCH (p:Post {id: $reply_to})
+            CREATE (p)<-[:REPLY]-(r:Post {id: $id, body: $body})
+            """,
+            reply_to = post.reply_to,
+            id = pid,
+            body = post.body
+        )
+    else:
+        session.run(
+            """
+            CREATE (p:Post {id: $id, body: $body})
+            """,
+            id = pid,
+            body = post.body
+        )
+        
+    return {'message': "Post created successfully"}
+
+@app.get("/thread/{pid}")
+async def get_thread(pid: str, session=Depends(get_neo4j_session)):
+    """ Get a thread of posts from the database
+    
+    args: pid (str): the id of the post to start the thread from
+    
+    returns: list of posts
+    """
+    
+    result = session.run(
         """
-        MATCH (p:Post {id: $id})
-        RETURN p.body
+        MATCH p=(tail:Post)-[:REPLY*]->(head:Post {id: $pid})
+            WHERE NOT (head)-->() AND NOT ()-->(tail)
+        WITH COLLECT(p) AS thread
+        CALL apoc.convert.toTree(thread) YIELD value AS tree
+        RETURN tree
         """,
-        id = pid
+        pid = pid
     )
-    return ans.data()
+    
+    return result.data()
