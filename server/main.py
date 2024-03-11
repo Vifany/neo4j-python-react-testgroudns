@@ -1,7 +1,6 @@
 import time
 from fastapi import FastAPI, Depends
 from neo4j import GraphDatabase
-from contextlib import asynccontextmanager
 from utils import random_string 
 from pydantic import BaseModel
 
@@ -11,7 +10,7 @@ class Post(BaseModel):
     reply_to: str = None
 
 # Define your Neo4j database connection details
-NEO4J_URI = "neo4j://localhost:7687"
+NEO4J_URI = "bolt://localhost:7687"
 NEO4J_USER = "neo4j"
 NEO4J_PASSWORD = "password"
 
@@ -58,7 +57,7 @@ async def create_post(post:Post, session=Depends(get_neo4j_session)):
         session.run(
             """
             MATCH (p:Post {id: $reply_to})
-            CREATE (p)<-[:REPLY]-(r:Post {id: $id, body: $body})
+            CREATE (p)-[:REPLY]->(r:Post {id: $id, body: $body})
             """,
             reply_to = post.reply_to,
             id = pid,
@@ -73,7 +72,7 @@ async def create_post(post:Post, session=Depends(get_neo4j_session)):
             body = post.body
         )
         
-    return {'message': "Post created successfully"}
+    return {'message': "Post created successfully", 'id': pid}
 
 @app.get("/thread/{pid}")
 async def get_thread(pid: str, session=Depends(get_neo4j_session)):
@@ -86,8 +85,8 @@ async def get_thread(pid: str, session=Depends(get_neo4j_session)):
     
     result = session.run(
         """
-        MATCH p=(tail:Post)-[:REPLY*]->(head:Post {id: $pid})
-            WHERE NOT (head)-->() AND NOT ()-->(tail)
+        MATCH p = (head:Post {id: $pid})-[:REPLY*]->(tail:Post)
+        WHERE NOT ()-->(head) AND NOT (tail)-->()
         WITH COLLECT(p) AS thread
         CALL apoc.convert.toTree(thread) YIELD value AS tree
         RETURN tree
