@@ -107,8 +107,19 @@ async def get_thread(pid: str, session=Depends(get_neo4j_session)):
         """,
         pid = pid
     )
+    output = result.data()[0]
+    if output ['tree'] == {}:
+        result = session.run(
+        """
+        MATCH (tree:Post {id: $pid})
+        RETURN tree
+        """,
+        pid = pid
+    )
     
-    return result.data()[0]
+        output = result.data()[0]
+    
+    return output
 
 @app.get("/threads")
 async def get_threads(session=Depends(get_neo4j_session)):
@@ -126,3 +137,22 @@ async def get_threads(session=Depends(get_neo4j_session)):
     )
     
     return {'threads': [head['head'] for head in result.data()]}
+
+@app.get("/post/{pid}")
+async def get_post(pid: str, session=Depends(get_neo4j_session)):
+    """ Get a single post from the database
+    
+    args: pid (str): the id of the post to retrieve
+    
+    returns: post
+    """
+    
+    result = session.run(
+        """
+        MATCH (p:Post {id: $pid})
+        RETURN p
+        """,
+        pid = pid
+    )
+    
+    return {'post' :result.data()[0]}

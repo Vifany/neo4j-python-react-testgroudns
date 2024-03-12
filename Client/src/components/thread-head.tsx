@@ -1,7 +1,7 @@
 
 import React from 'react';
 import styled from 'styled-components';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 interface PostProps {
   body:string;
@@ -18,13 +18,15 @@ const PostContainer = styled.div`
   `
 
 const Thread: React.FC<PostProps> = ({ body, pid }) => {
+  const navigate = useNavigate();
+  const handleClick = () => {
+    navigate(`/posts/${pid}`);
+  }
   return (
-  <Link to={`/posts/${pid}`}>
-    <PostContainer >
+    <PostContainer onClick={handleClick}>
       <h2>id: {pid}</h2>
       <p>{body}</p>
     </PostContainer>
-  </Link>
   );
 };
 
