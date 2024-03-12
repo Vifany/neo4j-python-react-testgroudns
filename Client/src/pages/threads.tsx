@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import  useThreadsState from '../utils/storage';
+import  {useThreadsState} from '../utils/storage';
 import Thread from '../components/thread-head';
 interface PageProps {
   // Define props if any

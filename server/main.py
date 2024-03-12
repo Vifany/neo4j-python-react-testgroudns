@@ -88,7 +88,7 @@ async def create_post(post:Post, session=Depends(get_neo4j_session)):
         
     return {'message': "Post created successfully", 'id': pid}
 
-@app.get("/thread/{pid}")
+@app.get("/posts/{pid}")
 async def get_thread(pid: str, session=Depends(get_neo4j_session)):
     """ Get a thread of posts from the database
     
@@ -108,7 +108,7 @@ async def get_thread(pid: str, session=Depends(get_neo4j_session)):
         pid = pid
     )
     
-    return result.data()
+    return result.data()[0]
 
 @app.get("/threads")
 async def get_threads(session=Depends(get_neo4j_session)):
